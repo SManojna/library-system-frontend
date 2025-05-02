@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Crimson+Text:wght@400;600&family=Merriweather:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif;
+  @apply min-h-screen text-gray-900 bg-cream;
+}
+
+.navbar {
+  @apply sticky top-0 z-50 bg-white shadow-sm border-b border-ochre/50;
+}
+
+.navbar-brand {
+  @apply text-3xl font-bold text-plum hover:text-plum-dark transition-colors font-merriweather;
+}
+
+.navbar-link {
+  @apply text-lg text-plum hover:text-plum-dark transition-colors font-merriweather;
+}
+
+.card {
+  @apply bg-white rounded-xl shadow-md transition-all duration-300 hover:shadow-lg border border-ochre/50;
+}
+
+.btn {
+  @apply font-medium rounded-md px-4 py-2 transition-all duration-300 hover:scale-105 font-crimson;
+}
+
+.btn-primary {
+  @apply bg-plum text-white hover:bg-plum-dark;
+}
+
+.btn-error {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+.btn-success {
+  @apply bg-emerald-600 text-white hover:bg-emerald-700;
+}
+
+.btn-ghost {
+  @apply bg-transparent text-plum hover:bg-plum/10;
+}
+
+.input {
+  @apply border-gray-200 rounded-md bg-white text-gray-900 focus:ring-2 focus:ring-purple-600 focus:border-purple-600 px-3 py-2;
+}
+
+.table {
+  @apply w-full bg-white rounded-xl shadow-md border border-ochre/50;
+}
+
+.table th {
+  @apply bg-cream text-plum py-3 px-4 font-semibold text-sm sticky top-0 z-10 font-crimson;
+}
+
+.table td {
+  @apply py-3 px-4 text-sm border-t border-ochre/50;
+}
+
+.table tr:nth-child(even) {
+  @apply bg-cream/50;
+}
+
+.table tr:hover {
+  @apply bg-purple-50;
+}
+
+.table-text {
+  @apply text-left;
+}
+
+.table-number {
+  @apply text-right font-mono;
+}
+
+.modal {
+  @apply bg-cream rounded-xl shadow-xl p-6 w-full max-w-sm mx-4 border border-ochre/50;
+}
+
+.modal-success {
+  @apply border-l-4 border-emerald-600;
+}
+
+.modal-error {
+  @apply border-l-4 border-red-600;
+}
+
+.modal-confirm {
+  @apply border-l-4 border-plum;
+}
+
+.glow {
+  @apply shadow-sm;
+}
+
+.input-wrapper {
+  @apply relative;
+}
+
+.input-wrapper label {
+  @apply absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-all duration-300 pointer-events-none;
+}
+
+.input-wrapper input:focus + label,
+.input-wrapper input:not(:placeholder-shown) + label {
+  @apply top-0 text-xs text-purple-600 bg-white px-1 -translate-y-5;
+}
+
+.book-tile {
+  @apply flex flex-col justify-between h-full p-4 bg-cream/30 rounded-xl border border-ochre/50;
+}
+
+.book-bg {
+  @apply relative;
+  background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%23D4A017" fill-opacity="0.2" d="M0,128L60,138.7C120,149,240,171,360,160C480,149,600,107,720,101.3C840,96,960,128,1080,138.7C1200,149,1320,139,1380,133.3L1440,128L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"%3E%3C/path%3E%3C/svg%3E');
+  background-size: cover;
+  background-position: center;
+}
+
+.home-bg {
+  @apply relative;
+  background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%238B5CF6" fill-opacity="0.1" d="M0,96L48,112C96,128,192,160,288,165.3C384,171,480,149,576,133.3C672,117,768,107,864,122.7C960,139,1056,181,1152,181.3C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"%3E%3C/path%3E%3C/svg%3E');
+  background-size: cover;
+  background-position: center;
+}
+
+.history-bg {
+  @apply relative;
+  background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%234C2C69" fill-opacity="0.15" d="M0,160L48,181.3C96,203,192,245,288,245.3C384,245,480,203,576,176C672,149,768,139,864,149.3C960,160,1056,181,1152,176C1248,171,1344,139,1392,122.7L1440,107L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"%3E%3C/path%3E%3C/svg%3E');
+  background-size: cover;
+  background-position: center;
+}
+
+@keyframes ripple {
+  0% { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+.btn-ripple::after {
+  content: '';
+  @apply absolute rounded-full bg-purple-200;
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+}
+
+.font-crimson {
+  font-family: 'Crimson Text', serif;
+}
+
+.font-merriweather {
+  font-family: 'Merriweather', serif;
+}
