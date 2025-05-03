@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -12,7 +12,7 @@ function TransactionHistory({ role, showModal, closeModal }) {
   const navigate = useNavigate();
   const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/session`, {
         headers: { 'Content-Type': 'application/json' },
@@ -23,14 +23,13 @@ function TransactionHistory({ role, showModal, closeModal }) {
       console.error('Session check error:', err);
       return false;
     }
-  };
+  }, [API_BASE_URL]);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
 
-      // Check session
       const isLoggedIn = await checkSession();
       if (!isLoggedIn) {
         localStorage.clear();
@@ -39,7 +38,6 @@ function TransactionHistory({ role, showModal, closeModal }) {
       }
 
       try {
-        // Fetch transactions
         const transRes = await axios.get(`${API_BASE_URL}/api/transactions`, {
           headers: { 'Content-Type': 'application/json' },
           withCredentials: true,
@@ -47,7 +45,6 @@ function TransactionHistory({ role, showModal, closeModal }) {
         console.log('Transactions fetched:', transRes.data);
         setTransactions(transRes.data);
 
-        // Fetch reservations
         const resRes = await axios.get(`${API_BASE_URL}/api/reservations`, {
           headers: { 'Content-Type': 'application/json' },
           withCredentials: true,
@@ -62,7 +59,7 @@ function TransactionHistory({ role, showModal, closeModal }) {
       }
     };
     fetchData();
-  }, [navigate, API_BASE_URL]);
+  }, [navigate, API_BASE_URL, checkSession]);
 
   const handleReturn = async (transactionId) => {
     try {
@@ -123,7 +120,7 @@ function TransactionHistory({ role, showModal, closeModal }) {
       console.log('Borrow response:', res.data);
       setReservations(reservations.filter((r) => r.book_id !== bookId));
       setTransactions([...transactions, {
-        transaction_id: Date.now(), // Temporary ID until refresh
+        transaction_id: Date.now(),
         book_id: bookId,
         book_title: reservations.find(r => r.book_id === bookId).book_title,
         issue_date: new Date().toISOString().split('T')[0],
@@ -198,25 +195,108 @@ function TransactionHistory({ role, showModal, closeModal }) {
           {role === 'admin' ? 'All Borrowing History' : 'Your Borrowing History'}
         </h2>
       </motion.div>
-      <>
-        {/* Borrowed Books Table */}
+
+      <motion.div
+        className="card overflow-x-auto mb-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h3 className="text-xl font-semibold text-plum font-crimson mb-4">
+          {role === 'admin' ? 'All Transactions' : 'Borrowed Books'}
+        </h3>
+        {transactions.length === 0 ? (
+          <motion.div
+            className="text-center text-plum font-crimson text-lg"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            No transactions found.
+          </motion.div>
+        ) : (
+          <table className="table w-full">
+            <thead>
+              <tr>
+                {role === 'admin' && <th className="table-text">User</th>}
+                <th className="table-text">Book</th>
+                <th className="table-text">Issue Date</th>
+                <th className="table-text">Due Date</th>
+                <th className="table-text">Return Date</th>
+                <th className="table-text">Fine ($)</th>
+                <th className="table-text">Status</th>
+                <th className="table-text">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((t, index) => (
+                <motion.tr
+                  key={t.transaction_id}
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  className="hover:shadow-sm"
+                >
+                  {role === 'admin' && <td className="table-text">{t.user_name}</td>}
+                  <td className="table-text">{t.book_title}</td>
+                  <td className="table-text">{t.issue_date}</td>
+                  <td className="table-text">{t.due_date}</td>
+                  <td className="table-text">{t.return_date || 'Not Returned'}</td>
+                  <td className="table-text">{getFineDisplay(t)}</td>
+                  <td className="table-text">
+                    <span
+                      className={`${
+                        t.status === 'returned' ? 'text-emerald-600' :
+                        t.status === 'overdue' ? 'text-red-600' :
+                        t.status === 'pending_approval' ? 'text-yellow-600' : 'text-plum'
+                      } font-medium`}
+                    >
+                      {formatStatus(t.status)}
+                    </span>
+                  </td>
+                  <td className="table-text">
+                    {role === 'student' && t.status !== 'returned' && t.status !== 'pending_approval' && (
+                      <button
+                        onClick={() => handleReturn(t.transaction_id)}
+                        className="btn btn-primary flex items-center"
+                      >
+                        <FiArrowLeft className="mr-2" /> Return
+                      </button>
+                    )}
+                    {role === 'admin' && t.status === 'pending_approval' && (
+                      <button
+                        onClick={() => handleApprove(t.transaction_id)}
+                        className="btn btn-success flex items-center"
+                      >
+                        <FiCheck className="mr-2" /> Approve
+                      </button>
+                    )}
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </motion.div>
+
+      {(role === 'student' || role === 'admin') && (
         <motion.div
-          className="card overflow-x-auto mb-8"
+          className="card overflow-x-auto"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
           <h3 className="text-xl font-semibold text-plum font-crimson mb-4">
-            {role === 'admin' ? 'All Transactions' : 'Borrowed Books'}
+            {role === 'admin' ? 'All Reservations' : 'Reserved Books'}
           </h3>
-          {transactions.length === 0 ? (
+          {reservations.length === 0 ? (
             <motion.div
               className="text-center text-plum font-crimson text-lg"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
             >
-              No transactions found.
+              No reservations found.
             </motion.div>
           ) : (
             <table className="table w-full">
@@ -224,133 +304,47 @@ function TransactionHistory({ role, showModal, closeModal }) {
                 <tr>
                   {role === 'admin' && <th className="table-text">User</th>}
                   <th className="table-text">Book</th>
-                  <th className="table-text">Issue Date</th>
-                  <th className="table-text">Due Date</th>
-                  <th className="table-text">Return Date</th>
-                  <th className="table-text">Fine ($)</th>
+                  <th className="table-text">Reservation Date</th>
                   <th className="table-text">Status</th>
-                  <th className="table-text">Action</th>
+                  <th className="table-text">Available Copies</th>
+                  {role === 'student' && <th className="table-text">Action</th>}
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((t, index) => (
+                {reservations.map((r, index) => (
                   <motion.tr
-                    key={t.transaction_id}
+                    key={r.reservation_id}
                     initial={{ x: -20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
                     className="hover:shadow-sm"
                   >
-                    {role === 'admin' && <td className="table-text">{t.user_name}</td>}
-                    <td className="table-text">{t.book_title}</td>
-                    <td className="table-text">{t.issue_date}</td>
-                    <td className="table-text">{t.due_date}</td>
-                    <td className="table-text">{t.return_date || 'Not Returned'}</td>
-                    <td className="table-text">{getFineDisplay(t)}</td>
+                    {role === 'admin' && <td className="table-text">{r.user_name}</td>}
+                    <td className="table-text">{r.book_title}</td>
+                    <td className="table-text">{r.reservation_date}</td>
                     <td className="table-text">
-                      <span
-                        className={`${
-                          t.status === 'returned' ? 'text-emerald-600' :
-                          t.status === 'overdue' ? 'text-red-600' :
-                          t.status === 'pending_approval' ? 'text-yellow-600' : 'text-plum'
-                        } font-medium`}
-                      >
-                        {formatStatus(t.status)}
-                      </span>
+                      <span className="text-plum font-medium">{formatStatus(r.status)}</span>
                     </td>
-                    <td className="table-text">
-                      {role === 'student' && t.status !== 'returned' && t.status !== 'pending_approval' && (
-                        <button
-                          onClick={() => handleReturn(t.transaction_id)}
-                          className="btn btn-primary flex items-center"
-                        >
-                          <FiArrowLeft className="mr-2" /> Return
-                        </button>
-                      )}
-                      {role === 'admin' && t.status === 'pending_approval' && (
-                        <button
-                          onClick={() => handleApprove(t.transaction_id)}
-                          className="btn btn-success flex items-center"
-                        >
-                          <FiCheck className="mr-2" /> Approve
-                        </button>
-                      )}
-                    </td>
+                    <td className="table-text text-right">{r.available_copies}</td>
+                    {role === 'student' && (
+                      <td className="table-text">
+                        {r.available_copies > 0 && (
+                          <button
+                            onClick={() => handleBorrow(r.book_id)}
+                            className="btn btn-success flex items-center"
+                          >
+                            Borrow
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </motion.tr>
                 ))}
               </tbody>
             </table>
           )}
         </motion.div>
-
-        {/* Reserved Books Table */}
-        {(role === 'student' || role === 'admin') && (
-          <motion.div
-            className="card overflow-x-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h3 className="text-xl font-semibold text-plum font-crimson mb-4">
-              {role === 'admin' ? 'All Reservations' : 'Reserved Books'}
-            </h3>
-            {reservations.length === 0 ? (
-              <motion.div
-                className="text-center text-plum font-crimson text-lg"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                No reservations found.
-              </motion.div>
-            ) : (
-              <table className="table w-full">
-                <thead>
-                  <tr>
-                    {role === 'admin' && <th className="table-text">User</th>}
-                    <th className="table-text">Book</th>
-                    <th className="table-text">Reservation Date</th>
-                    <th className="table-text">Status</th>
-                    <th className="table-text">Available Copies</th>
-                    {role === 'student' && <th className="table-text">Action</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {reservations.map((r, index) => (
-                    <motion.tr
-                      key={r.reservation_id}
-                      initial={{ x: -20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="hover:shadow-sm"
-                    >
-                      {role === 'admin' && <td className="table-text">{r.user_name}</td>}
-                      <td className="table-text">{r.book_title}</td>
-                      <td className="table-text">{r.reservation_date}</td>
-                      <td className="table-text">
-                        <span className="text-plum font-medium">{formatStatus(r.status)}</span>
-                      </td>
-                      <td className="table-text text-right">{r.available_copies}</td>
-                      {role === 'student' && (
-                        <td className="table-text">
-                          {r.available_copies > 0 && (
-                            <button
-                              onClick={() => handleBorrow(r.book_id)}
-                              className="btn btn-success flex items-center"
-                            >
-                              Borrow
-                            </button>
-                          )}
-                        </td>
-                      )}
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </motion.div>
-        )}
-      </>
+      )}
     </motion.div>
   );
 }

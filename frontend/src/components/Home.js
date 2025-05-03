@@ -20,7 +20,7 @@ function Home({ role, showModal, closeModal }) {
   const navigate = useNavigate();
   const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/session`, {
         headers: { 'Content-Type': 'application/json' },
@@ -31,7 +31,7 @@ function Home({ role, showModal, closeModal }) {
       console.error('Session check error:', err);
       return false;
     }
-  };
+  }, [API_BASE_URL]);
 
   const debouncedSearch = useCallback(
     debounce((term) => {
@@ -51,7 +51,6 @@ function Home({ role, showModal, closeModal }) {
       setIsLoading(true);
       setError(null);
 
-      // Check session
       const isLoggedIn = await checkSession();
       if (!isLoggedIn) {
         localStorage.clear();
@@ -60,7 +59,6 @@ function Home({ role, showModal, closeModal }) {
       }
 
       try {
-        // Fetch books
         const booksRes = await axios.get(`${API_BASE_URL}/api/books`, {
           headers: { 'Content-Type': 'application/json' },
           withCredentials: true,
@@ -76,7 +74,6 @@ function Home({ role, showModal, closeModal }) {
         setBooks(booksWithDefaults);
         setFilteredBooks(booksWithDefaults);
 
-        // Fetch book statuses for students
         if (role === 'student') {
           try {
             const statusRes = await axios.get(`${API_BASE_URL}/api/books/status`, {
@@ -87,7 +84,7 @@ function Home({ role, showModal, closeModal }) {
             setBookStatuses(statusRes.data);
           } catch (statusErr) {
             console.error('Status fetch error:', statusErr.response?.data || statusErr.message);
-            setBookStatuses([]); // Fallback to empty statuses
+            setBookStatuses([]);
           }
         }
       } catch (err) {
@@ -98,7 +95,7 @@ function Home({ role, showModal, closeModal }) {
       }
     };
     fetchData();
-  }, [navigate, role, API_BASE_URL]);
+  }, [navigate, role, API_BASE_URL, checkSession]);
 
   useEffect(() => {
     debouncedSearch(searchTerm);
@@ -569,44 +566,44 @@ function Home({ role, showModal, closeModal }) {
         {filteredBooks.map((book, index) => (
           <Tilt key={book.book_id} tiltMaxAngleX={10} tiltMaxAngleY={10}>
             <motion.div
-              className="book-tile card"
+              className="book-tile card bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <div className="p-4">
-                <h3 className="text-lg font-semibold text-plum font-crimson">{book.title}</h3>
-                <p className="text-sm text-gray-600">Author: {book.author}</p>
-                <p className="text-sm text-gray-600">ISBN: {book.isbn}</p>
-                <p className="text-sm text-gray-600">Category: {book.category || 'N/A'}</p>
-                <p className="text-sm text-gray-600">Published: {book.published_year}</p>
-                <p className="text-sm text-gray-600">Total Copies: {book.total_copies}</p>
-                <p className="text-sm text-gray-600">Available Copies: {book.available_copies}</p>
-                <p className="text-sm font-medium text-plum mt-2">
-                  {book.available ? 'Available' : 'Not Available'}
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-plum font-crimson mb-2">{book.title}</h3>
+                <p className="text-sm text-gray-700 font-crimson mb-1">Author: {book.author}</p>
+                <p className="text-sm text-gray-700 font-crimson mb-1">ISBN: {book.isbn}</p>
+                <p className="text-sm text-gray-700 font-crimson mb-1">Category: {book.category || 'N/A'}</p>
+                <p className="text-sm text-gray-700 font-crimson mb-1">Published: {book.published_year}</p>
+                <p className="text-sm text-gray-700 font-crimson mb-1">Total Copies: {book.total_copies}</p>
+                <p className="text-sm text-gray-700 font-crimson mb-2">Available Copies: {book.available_copies}</p>
+                <p className="text-sm font-medium text-plum font-crimson mb-4">
+                  {book.available_copies > 0 ? 'Available' : 'Not Available'}
                 </p>
-                <div className="mt-4 space-y-2">
+                <div className="space-y-3">
                   {role === 'student' && (
                     <>
                       {getBookStatus(book.book_id) === 'borrowed' ? (
-                        <button className="btn btn-ghost w-full" disabled>
+                        <button className="btn btn-ghost w-full opacity-50 cursor-not-allowed" disabled>
                           Borrowed
                         </button>
                       ) : getBookStatus(book.book_id) === 'reserved' ? (
-                        <button className="btn btn-ghost w-full" disabled>
+                        <button className="btn btn-ghost w-full opacity-50 cursor-not-allowed" disabled>
                           Reserved
                         </button>
-                      ) : book.available && getBookStatus(book.book_id) !== 'all_reserved' ? (
+                      ) : book.available_copies > 0 ? (
                         <button
                           onClick={() => handleBorrow(book.book_id)}
-                          className="btn btn-success w-full"
+                          className="btn btn-success w-full flex items-center justify-center"
                         >
                           Borrow
                         </button>
                       ) : (
                         <button
                           onClick={() => handleReserve(book.book_id)}
-                          className="btn btn-primary w-full flex items-center"
+                          className="btn btn-primary w-full flex items-center justify-center"
                         >
                           <FiBookmark className="mr-2" /> Reserve
                         </button>
@@ -617,13 +614,13 @@ function Home({ role, showModal, closeModal }) {
                     <>
                       <button
                         onClick={() => startEditing(book)}
-                        className="btn btn-primary w-full flex items-center"
+                        className="btn btn-primary w-full flex items-center justify-center"
                       >
                         <FiEdit className="mr-2" /> Edit
                       </button>
                       <button
                         onClick={() => handleDelete(book.book_id)}
-                        className="btn btn-error w-full flex items-center"
+                        className="btn btn-error w-full flex items-center justify-center"
                       >
                         <FiTrash2 className="mr-2" /> Delete
                       </button>
