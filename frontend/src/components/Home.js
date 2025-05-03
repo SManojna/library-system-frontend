@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Tilt from 'react-parallax-tilt';
 import { FiBook, FiSearch, FiPlus, FiTrash2, FiEdit, FiBookmark } from 'react-icons/fi';
+import debounce from 'lodash/debounce';
 
 function Home({ role, showModal, closeModal }) {
   const [books, setBooks] = useState([]);
@@ -14,10 +15,50 @@ function Home({ role, showModal, closeModal }) {
   const [isAddingBook, setIsAddingBook] = useState(false);
   const [isEditingBook, setIsEditingBook] = useState(false);
   const [bookStatuses, setBookStatuses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
   const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
+  const checkSession = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/session`, {
+        headers: { 'Content-Type': 'application/json' },
+        withCredentials: true,
+      });
+      return res.data.logged_in;
+    } catch (err) {
+      console.error('Session check error:', err);
+      return false;
+    }
+  };
+
+  const debouncedSearch = useCallback(
+    debounce((term) => {
+      setFilteredBooks(
+        books.filter(
+          (book) =>
+            book.title.toLowerCase().includes(term.toLowerCase()) ||
+            book.author.toLowerCase().includes(term.toLowerCase())
+        )
+      );
+    }, 300),
+    [books]
+  );
+
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      // Check session
+      const isLoggedIn = await checkSession();
+      if (!isLoggedIn) {
+        localStorage.clear();
+        navigate('/login');
+        return;
+      }
+
       try {
         // Fetch books
         const booksRes = await axios.get(`${API_BASE_URL}/api/books`, {
@@ -37,35 +78,32 @@ function Home({ role, showModal, closeModal }) {
 
         // Fetch book statuses for students
         if (role === 'student') {
-          const statusRes = await axios.get(`${API_BASE_URL}/api/books/status`, {
-            headers: { 'Content-Type': 'application/json' },
-            withCredentials: true,
-          });
-          console.log('Book statuses fetched:', statusRes.data);
-          setBookStatuses(statusRes.data);
+          try {
+            const statusRes = await axios.get(`${API_BASE_URL}/api/books/status`, {
+              headers: { 'Content-Type': 'application/json' },
+              withCredentials: true,
+            });
+            console.log('Book statuses fetched:', statusRes.data);
+            setBookStatuses(statusRes.data);
+          } catch (statusErr) {
+            console.error('Status fetch error:', statusErr.response?.data || statusErr.message);
+            setBookStatuses([]); // Fallback to empty statuses
+          }
         }
       } catch (err) {
         console.error('Fetch data error:', err.response?.data || err.message);
-        if (err.response?.status === 401) {
-          localStorage.clear();
-          navigate('/login');
-        } else {
-          showModal('Error', err.response?.data?.error || 'Failed to fetch data', 'error');
-        }
+        setError(err.response?.data?.error || 'Failed to fetch data');
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchData();
-  }, [navigate, showModal, role, API_BASE_URL]);
+  }, [navigate, role, API_BASE_URL]);
 
   useEffect(() => {
-    setFilteredBooks(
-      books.filter(
-        (book) =>
-          book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          book.author.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [searchTerm, books]);
+    debouncedSearch(searchTerm);
+    return () => debouncedSearch.cancel();
+  }, [searchTerm, debouncedSearch]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -177,11 +215,16 @@ function Home({ role, showModal, closeModal }) {
       setBooks(booksWithDefaults);
       setFilteredBooks(booksWithDefaults);
       if (role === 'student') {
-        const statusRes = await axios.get(`${API_BASE_URL}/api/books/status`, {
-          headers: { 'Content-Type': 'application/json' },
-          withCredentials: true,
-        });
-        setBookStatuses(statusRes.data);
+        try {
+          const statusRes = await axios.get(`${API_BASE_URL}/api/books/status`, {
+            headers: { 'Content-Type': 'application/json' },
+            withCredentials: true,
+          });
+          setBookStatuses(statusRes.data);
+        } catch (statusErr) {
+          console.error('Status fetch error:', statusErr.response?.data || statusErr.message);
+          setBookStatuses([]);
+        }
       }
     } catch (err) {
       console.error('Add book error:', err.response?.data || err.message);
@@ -225,11 +268,16 @@ function Home({ role, showModal, closeModal }) {
       setBooks(booksWithDefaults);
       setFilteredBooks(booksWithDefaults);
       if (role === 'student') {
-        const statusRes = await axios.get(`${API_BASE_URL}/api/books/status`, {
-          headers: { 'Content-Type': 'application/json' },
-          withCredentials: true,
-        });
-        setBookStatuses(statusRes.data);
+        try {
+          const statusRes = await axios.get(`${API_BASE_URL}/api/books/status`, {
+            headers: { 'Content-Type': 'application/json' },
+            withCredentials: true,
+          });
+          setBookStatuses(statusRes.data);
+        } catch (statusErr) {
+          console.error('Status fetch error:', statusErr.response?.data || statusErr.message);
+          setBookStatuses([]);
+        }
       }
     } catch (err) {
       console.error('Edit book error:', err.response?.data || err.message);
@@ -247,6 +295,32 @@ function Home({ role, showModal, closeModal }) {
     const status = bookStatuses.find(s => s.book_id === bookId);
     return status ? status.status : 'available';
   };
+
+  if (isLoading) {
+    return (
+      <motion.div
+        className="container mx-auto p-6 home-bg min-h-screen flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <p className="text-plum text-xl font-crimson">Loading...</p>
+      </motion.div>
+    );
+  }
+
+  if (error) {
+    return (
+      <motion.div
+        className="container mx-auto p-6 home-bg min-h-screen flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <p className="text-red-500 text-xl font-crimson">{error}</p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
