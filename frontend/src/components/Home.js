@@ -43,7 +43,7 @@ function Home({ role, showModal, closeModal }) {
         )
       );
     }, 300),
-    [books]
+    [books, setFilteredBooks]
   );
 
   useEffect(() => {
