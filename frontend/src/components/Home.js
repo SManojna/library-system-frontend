@@ -55,7 +55,7 @@ function Home({ role, showModal, closeModal }) {
       }
     };
     fetchData();
-  }, [navigate, showModal, role]);
+  }, [navigate, showModal, role, API_BASE_URL]);
 
   useEffect(() => {
     setFilteredBooks(

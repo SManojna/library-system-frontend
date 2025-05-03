@@ -45,7 +45,7 @@ function TransactionHistory({ role, showModal, closeModal }) {
       }
     };
     fetchData();
-  }, [navigate, showModal]);
+  }, [navigate, showModal, API_BASE_URL]);
 
   const handleReturn = async (transactionId) => {
     try {
@@ -280,7 +280,7 @@ function TransactionHistory({ role, showModal, closeModal }) {
                   No reservations found.
                 </motion.div>
               ) : (
-                <table className="table 🙂w-full">
+                <table className="table w-full">
                   <thead>
                     <tr>
                       {role === 'admin' && <th className="table-text">User</th>}

@@ -9,6 +9,7 @@ import Particles from 'react-tsparticles';
 import { loadFull } from 'tsparticles';
 
 function App() {
+  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
   const [role, setRole] = useState(localStorage.getItem('role') || '');
   const [userName, setUserName] = useState(localStorage.getItem('name') || '');
   const [modal, setModal] = useState({ isOpen: false, title: '', message: '', type: 'success' });
@@ -24,7 +25,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/logout', {
+      const response = await fetch(`${API_BASE_URL}/api/logout`, {
         method: 'POST',
         credentials: 'include',
       });
